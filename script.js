@@ -104,7 +104,31 @@ class Player {
 
 // Main blueprint for handling many differenct enemy types
 class Enemy {
+    constructor(game) {
+        // Setting enemie up for game
+        this.game = game;
+        this.x = this.game.width; // Starting position of enemies is from the right
+        this.speedX = Math.random() * -1.5 - 0.5; // Enemies have alternating speeds
+        this.markedForDeletion = false;
+    }
+    update() {
+        this.x += this.speedX;
+        if ( this.x + this.width < 0) this.markedForDeletion = true;
+    }
 
+    draw(context) {
+        context.fillStyle = "red";
+        context.fillRect(this.x, this.y, this.width, this.height)
+    }
+}
+
+class Angler1 extends Enemy {
+    constructor(game) {
+        super(game);
+        this.width = 228 * 0.2;
+        this.height = 169 * 0.2;
+        this.y = Math.random() * (this.game.height * 0.9 - this.height);
+    }
 }
 
 // Handle individual background layers in parallax (seamlessly scroll through multi-layer background)
@@ -119,7 +143,19 @@ class Background {
 
 // Draw score, timer and other information that needs to be displayed to user
 class UI {
-
+    constructor(game) {
+        this.game = game;
+        this.fontSize = 25;
+        this.fontFamily = "Helvetica";
+        this.color = 'yellow';
+    }
+    draw(context) {
+        // ammo
+        context.fillStyle = this.color;
+        for (let i = 0; i < this.game.ammo; i++) {
+            context.fillRect(20 + 5 * i, 50, 3, 20);
+        }
+    }
 }
 
 // All logic comes together to run game
@@ -129,16 +165,52 @@ class Game {
         this.height = height;
         this.player = new Player(this);
         this.input = new InputHandler(this);
+        this.ui = new UI(this);
         this.keys = []; // Keeps track of all keys currently active
+        this.enemies = [];
+        this.enemyTimer = 0;
+        this.enemyInterval = 1000;
         this.ammo = 20;
+        this.maxAmmo = 50;
+        this.ammoTimer = 0;
+        this.ammoInterval = 500;
+        this.gameOver = false;
     }
 
-    update() {
+    update(deltaTime) {
         this.player.update();
+
+        // Ammo regen timer
+        if ( this.ammoTimer > this.ammoInterval ) {
+            if ( this.ammo < this.maxAmmo ) this.ammo++;
+            this.ammoTimer = 0;
+        } 
+        else {
+            this.ammoTimer += deltaTime;
+        }
+        this.enemies.forEach(enemy => {
+            enemy.update();
+        })
+        this.enemies = this.enemies.filter(enemy => !enemy.markedForDeletion);
+        
+        if (this.enemyTimer > this.enemyInterval && !this.gameOver) {
+            this.addEnemy();
+            this.enemyTimer = 0;
+        } 
+        else {
+            this.enemyTimer += deltaTime;
+        }
     }
 
     draw(context) {
         this.player.draw(context);
+        this.ui.draw(context);
+        this.enemies.forEach(enemy => {
+            enemy.draw(context);
+        })
+    }
+    addEnemy() {
+        this.enemies.push(new Angler1(this));
     }
 }
 
@@ -151,7 +223,7 @@ function animate(timeStamp) {
     const deltaTime = timeStamp - lastTime;
     lastTime = timeStamp;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    game.update();
+    game.update(deltaTime);
     game.draw(ctx);
 
     // Tells the browser to perform an animation and it requests that the browser calls a specified function to update an animation before the next repaint.
