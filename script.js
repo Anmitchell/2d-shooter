@@ -110,6 +110,8 @@ class Enemy {
         this.x = this.game.width; // Starting position of enemies is from the right
         this.speedX = Math.random() * -1.5 - 0.5; // Enemies have alternating speeds
         this.markedForDeletion = false;
+        this.lives = 5;
+        this.score = this.lives;
     }
     update() {
         this.x += this.speedX;
@@ -119,6 +121,9 @@ class Enemy {
     draw(context) {
         context.fillStyle = "red";
         context.fillRect(this.x, this.y, this.width, this.height)
+        context.fillStyle = 'black';
+        context.font = '20px Helvetica';
+        context.fillText(this.lives, this.x, this.y);
     }
 }
 
@@ -190,6 +195,19 @@ class Game {
         }
         this.enemies.forEach(enemy => {
             enemy.update();
+            if (this.checkCollision(this.player, enemy)){
+                enemy.markedForDeletion = true;
+            }
+            this.player.projectiles.forEach(projectile => {
+                if (this.checkCollision(projectile, enemy)) {
+                    enemy.lives--;
+                    projectile.markedForDeletion = true;
+                    if (enemy.lives <= 0 ) {
+                        enemy.markedForDeletion = true;
+                        this.score += enemy.score; 
+                    }
+                }
+            })
         })
         this.enemies = this.enemies.filter(enemy => !enemy.markedForDeletion);
         
@@ -211,6 +229,14 @@ class Game {
     }
     addEnemy() {
         this.enemies.push(new Angler1(this));
+    }
+    checkCollision(rect1,rect2) {
+        return (
+            rect1.x < rect2.x + rect2.width &&
+            rect1.x + rect1.width > rect2.x &&
+            rect1.y < rect2.y + rect2.height &&
+            rect1.height + rect1.y > rect2.y
+        )
     }
 }
 
